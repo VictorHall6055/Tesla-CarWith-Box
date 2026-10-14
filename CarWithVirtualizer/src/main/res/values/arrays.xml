@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="xposed_scope">
+        <item>com.miui.carlink</item>
+        <item>com.milink.service</item>
+        <item>com.baidu.carlife.xiaomi</item>
+        <item>com.baidu.carlifevehicle</item>
+        <item>com.android.systemui</item>
+        <item>miui.systemui.plugin</item>
+    </string-array>
+</resources>

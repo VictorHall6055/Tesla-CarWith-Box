@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tesla CarWith Stream</title>
+  <style>
+    :root {
+      --hyper-blue: #007aff;
+      --hyper-blue-glow: rgba(0, 122, 255, 0.45);
+      --glass-bg: rgba(20, 21, 26, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --glass-text: #ffffff;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "MiSans", "Segoe UI", Roboto, sans-serif;
+    }
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+    }
+    #screen-stream {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      cursor: pointer;
+      display: block;
+      transition: object-fit 0.2s ease;
+      will-change: transform;
+      transform: translateZ(0);
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+    }
+    #screen-stream.fit-mode {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+    }
+    
+    /* 悬浮液态玻璃操控胶囊 */
+    .glass-hud {
+      position: absolute;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      border-radius: 999px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      padding: 6px 10px;
+      gap: 6px;
+      opacity: 0.85;
+      transition: opacity 0.25s, transform 0.2s;
+    }
+    .glass-hud:hover, .glass-hud:active {
+      opacity: 1;
+    }
+    #top-hud {
+      top: 14px;
+      right: 14px;
+    }
+    #zoom-hud {
+      bottom: 24px;
+      right: 20px;
+      flex-direction: column;
+      border-radius: 20px;
+      padding: 6px;
+      gap: 8px;
+    }
+    .hud-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .hud-btn:active {
+      transform: scale(0.92);
+      background: var(--hyper-blue);
+      border-color: var(--hyper-blue);
+      box-shadow: 0 0 14px var(--hyper-blue-glow);
+    }
+    .hud-pill {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .hud-pill:active, .hud-pill.active {
+      background: var(--hyper-blue);
+      border-color: var(--hyper-blue);
+      transform: scale(0.94);
+    }
+
+    #stats {
+      position: absolute;
+      bottom: 12px;
+      left: 16px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 11px;
+      z-index: 90;
+      pointer-events: none;
+      font-family: monospace;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.85);
+    }
+    #loading {
+      position: absolute;
+      color: #38bdf8;
+      font-size: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .spinner {
+      width: 34px;
+      height: 34px;
+      border: 3px solid rgba(0, 122, 255, 0.2);
+      border-top-color: var(--hyper-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* 消除触控遮罩闪烁 */
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="loading">
+      <div class="spinner"></div>
+      <div>正在接入 CarWith 独立车载副屏...</div>
+    </div>
+    
+    <img id="screen-stream" src="/api/stream" alt="Tesla Stream" style="display: none;" />
+
+    <!-- 顶部状态与工具栏 (自适应切换 + 全屏 + 刷新 + 声音) -->
+    <div id="top-hud" class="glass-hud">
+      <button class="hud-pill" id="btn-fit-mode" title="挂挡行驶窗口自适应无黑边">↔️ 挂挡自适应</button>
+      <button class="hud-pill" id="btn-audio" title="点击开启或关闭网页音频">🔇 网页静音</button>
+      <button class="hud-pill" id="btn-fullscreen" title="P档全屏浏览">⛶ 全屏</button>
+      <button class="hud-pill" id="btn-reload" title="重新连接串流">🔄 刷新</button>
+    </div>
+    <audio id="car-audio" preload="none" style="display:none;"></audio>
+
+    <!-- 右下角地图缩放工具条 -->
+    <div id="zoom-hud" class="glass-hud">
+      <button class="hud-btn" id="btn-zoom-in" title="放大地图">+</button>
+      <button class="hud-btn" id="btn-zoom-out" title="缩小地图">−</button>
+    </div>
+
+    <div id="stats">
+      规格: <span id="stat-res">1280x720</span> | 视口: <span id="stat-vw">--</span> | 延迟: <span id="stat-ping">--</span>ms
+    </div>
+  </div>
+
+  <script>
+    const streamImg = document.getElementById('screen-stream');
+    const loading = document.getElementById('loading');
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+    const btnFitMode = document.getElementById('btn-fit-mode');
+    const btnReload = document.getElementById('btn-reload');
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+    const statRes = document.getElementById('stat-res');
+    const statVw = document.getElementById('stat-vw');
+    const statPing = document.getElementById('stat-ping');
+    const container = document.getElementById('container');
+
+    let targetWidth = 1280;
+    let targetHeight = 720;
+    let apiPrefix = '/api'; // 自动兼容 /api 与 /cgi-bin
+
+    function updateViewportInfo() {
+      statVw.innerText = `${window.innerWidth}x${window.innerHeight}`;
+    }
+    window.addEventListener('resize', updateViewportInfo);
+    updateViewportInfo();
+
+    // 挂挡分屏自适应切换模式 (contain 等比 vs fill 铺满)
+    let isFitMode = localStorage.getItem('tesla_fit_mode') === 'true';
+    function applyFitMode() {
+      if (isFitMode) {
+        streamImg.classList.add('fit-mode');
+        btnFitMode.classList.add('active');
+        btnFitMode.innerText = '📐 等比居中';
+      } else {
+        streamImg.classList.remove('fit-mode');
+        btnFitMode.classList.remove('active');
+        btnFitMode.innerText = '↔️ 挂挡自适应';
+      }
+    }
+    applyFitMode();
+
+    btnFitMode.addEventListener('click', () => {
+      isFitMode = !isFitMode;
+      localStorage.setItem('tesla_fit_mode', isFitMode);
+      applyFitMode();
+    });
+
+    // 网页端音频流控 (Web Audio API PCM 实时无损超低延迟引擎，零静音底噪)
+    const btnAudio = document.getElementById('btn-audio');
+    const carAudio = document.getElementById('car-audio');
+    let audioPlaying = false;
+    let audioCtx = null;
+    let audioAbortController = null;
+    let audioReader = null;
+    let nextPlayTime = 0;
+
+    btnAudio.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleAudio();
+    });
+
+    async function toggleAudio() {
+      if (!audioPlaying) {
+        startAudioStream();
+      } else {
+        stopAudioStream();
+      }
+    }
+
+    async function startAudioStream() {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+          fallbackWavPlay();
+          return;
+        }
+
+        if (!audioCtx) {
+          audioCtx = new AudioContextClass({ sampleRate: 44100 });
+        }
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+
+        audioAbortController = new AbortController();
+        audioPlaying = true;
+        btnAudio.innerText = '🔊 网页声音';
+        btnAudio.style.background = 'rgba(0, 122, 255, 0.45)';
+        btnAudio.style.borderColor = 'rgba(0, 122, 255, 0.8)';
+
+        const resp = await fetch(apiPrefix + '/audio.pcm?t=' + Date.now(), {
+          signal: audioAbortController.signal
+        });
+
+        if (!resp.body) {
+          fallbackWavPlay();
+          return;
+        }
+
+        audioReader = resp.body.getReader();
+        nextPlayTime = audioCtx.currentTime + 0.05; // 50ms 缓冲
+        let pendingBytes = new Uint8Array(0);
+
+        while (audioPlaying) {
+          const { done, value } = await audioReader.read();
+          if (done) break;
+          if (!value || value.length === 0) continue;
+
+          let totalLen = pendingBytes.length + value.length;
+          let combined = new Uint8Array(totalLen);
+          if (pendingBytes.length > 0) {
+            combined.set(pendingBytes, 0);
+            combined.set(value, pendingBytes.length);
+          } else {
+            combined.set(value, 0);
+          }
+
+          let usableBytes = totalLen - (totalLen % 4);
+          if (usableBytes === 0) {
+            pendingBytes = combined;
+            continue;
+          }
+
+          pendingBytes = combined.slice(usableBytes);
+          let numFrames = usableBytes / 4;
+          let dataView = new DataView(combined.buffer, combined.byteOffset, usableBytes);
+          let leftChannel = new Float32Array(numFrames);
+          let rightChannel = new Float32Array(numFrames);
+
+          for (let i = 0; i < numFrames; i++) {
+            let offset = i * 4;
+            leftChannel[i] = dataView.getInt16(offset, true) / 32768.0;
+            rightChannel[i] = dataView.getInt16(offset + 2, true) / 32768.0;
+          }
+
+          let audioBuffer = audioCtx.createBuffer(2, numFrames, 44100);
+          audioBuffer.copyToChannel(leftChannel, 0);
+          audioBuffer.copyToChannel(rightChannel, 1);
+
+          let source = audioCtx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(audioCtx.destination);
+
+          let now = audioCtx.currentTime;
+          if (nextPlayTime < now) {
+            nextPlayTime = now + 0.02;
+          }
+          source.start(nextPlayTime);
+          nextPlayTime += audioBuffer.duration;
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.log('PCM stream interrupted, falling back...', err);
+          if (audioPlaying) {
+            fallbackWavPlay();
+          }
+        }
+      }
+    }
+
+    function stopAudioStream() {
+      audioPlaying = false;
+      if (audioAbortController) {
+        try { audioAbortController.abort(); } catch (e) {}
+        audioAbortController = null;
+      }
+      if (audioReader) {
+        try { audioReader.cancel(); } catch (e) {}
+        audioReader = null;
+      }
+      if (carAudio) {
+        carAudio.pause();
+        carAudio.src = '';
+      }
+      if (audioCtx) {
+        try { audioCtx.suspend(); } catch (e) {}
+      }
+      btnAudio.innerText = '🔇 网页静音';
+      btnAudio.style.background = '';
+      btnAudio.style.borderColor = '';
+    }
+
+    function fallbackWavPlay() {
+      carAudio.src = apiPrefix + '/audio.wav?t=' + Date.now();
+      carAudio.play().then(() => {
+        audioPlaying = true;
+        btnAudio.innerText = '🔊 网页声音';
+        btnAudio.style.background = 'rgba(0, 122, 255, 0.45)';
+        btnAudio.style.borderColor = 'rgba(0, 122, 255, 0.8)';
+      }).catch(err => {
+        console.log('Audio autoplay blocked, tap again', err);
+        stopAudioStream();
+      });
+    }
+
+    // 智能探测 API 前缀 (/api vs /cgi-bin)
+    fetch('/api/ping')
+      .then(r => { if (!r.ok) apiPrefix = '/cgi-bin'; })
+      .catch(() => { apiPrefix = '/cgi-bin'; });
+
+    // 获取当前配置分辨率
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.resolution) {
+          const parts = data.resolution.split('x');
+          if (parts.length === 2) {
+            targetWidth = parseInt(parts[0]);
+            targetHeight = parseInt(parts[1]);
+            statRes.innerText = `${targetWidth}x${targetHeight}`;
+          }
+        }
+      })
+      .catch(() => {});
+
+    streamImg.onload = () => {
+      loading.style.display = 'none';
+      streamImg.style.display = 'block';
+      if (streamImg.naturalWidth && streamImg.naturalHeight) {
+        targetWidth = streamImg.naturalWidth;
+        targetHeight = streamImg.naturalHeight;
+        statRes.innerText = `${targetWidth}x${targetHeight}`;
+      }
+    };
+
+    let retryCount = 0;
+    streamImg.onerror = () => {
+      loading.innerHTML = '<div style="color:#ef4444;">串流重连中...</div>';
+      retryCount++;
+      setTimeout(() => {
+        // 自动降级切换 /api/stream 与 /cgi-bin/stream
+        const streamPath = (retryCount % 2 === 1) ? '/cgi-bin/stream' : '/api/stream';
+        streamImg.src = streamPath + '?t=' + Date.now();
+      }, 1200);
+    };
+
+    // 全屏切换
+    btnFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    btnReload.addEventListener('click', () => {
+      loading.style.display = 'flex';
+      streamImg.src = apiPrefix + '/stream?t=' + Date.now();
+    });
+
+    // 缩放快捷键
+    btnZoomIn.addEventListener('click', () => {
+      sendTouch('zoom', Math.round(targetWidth / 2), Math.round(targetHeight / 2), '&dir=in');
+    });
+    btnZoomOut.addEventListener('click', () => {
+      sendTouch('zoom', Math.round(targetWidth / 2), Math.round(targetHeight / 2), '&dir=out');
+    });
+
+    function showRipple(clientX, clientY) {
+      // 禁用遮罩层注入，消除特斯拉浏览器图层重绘与屏幕闪烁
+    }
+
+    function getRelativeCoords(clientX, clientY) {
+      const rect = streamImg.getBoundingClientRect();
+      const xRatio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const yRatio = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+
+      return {
+        x: Math.round(xRatio * targetWidth),
+        y: Math.round(yRatio * targetHeight)
+      };
+    }
+
+    function sendTouch(action, x, y, extra = '') {
+      fetch(`${apiPrefix}/touch?action=${action}&x=${x}&y=${y}${extra}`, { keepalive: true }).catch(() => {
+        const altPrefix = (apiPrefix === '/api') ? '/cgi-bin' : '/api';
+        fetch(`${altPrefix}/touch?action=${action}&x=${x}&y=${y}${extra}`, { keepalive: true }).catch(() => {});
+      });
+    }
+
+    // 触控手势核心引擎 (原子手势调度，杜绝屏幕闪烁与卡顿)
+    let isTracking = false;
+    let startX = 0;
+    let startY = 0;
+    let startClientX = 0;
+    let startClientY = 0;
+    let startTime = 0;
+    let hasMoved = false;
+
+    streamImg.addEventListener('pointerdown', (e) => {
+      isTracking = true;
+      hasMoved = false;
+      try { streamImg.setPointerCapture(e.pointerId); } catch(err) {}
+      
+      startClientX = e.clientX;
+      startClientY = e.clientY;
+      const coords = getRelativeCoords(e.clientX, e.clientY);
+      startX = coords.x;
+      startY = coords.y;
+      startTime = performance.now();
+    });
+
+    streamImg.addEventListener('pointermove', (e) => {
+      if (!isTracking) return;
+      const dx = Math.abs(e.clientX - startClientX);
+      const dy = Math.abs(e.clientY - startClientY);
+      if (dx > 8 || dy > 8) {
+        hasMoved = true;
+      }
+    });
+
+    streamImg.addEventListener('pointerup', (e) => {
+      if (!isTracking) return;
+      isTracking = false;
+      try { streamImg.releasePointerCapture(e.pointerId); } catch(err) {}
+
+      const coords = getRelativeCoords(e.clientX, e.clientY);
+      const duration = Math.max(100, Math.min(600, Math.round(performance.now() - startTime)));
+
+      if (hasMoved) {
+        // 滑动手势：一次性原子调度 Android 原生硬件滑动，丝滑跟手且不闪烁
+        sendTouch('swipe', startX, startY, `&x2=${coords.x}&y2=${coords.y}&dur=${duration}`);
+      } else {
+        // 点击手势：精准单点触控
+        sendTouch('tap', coords.x, coords.y);
+      }
+    });
+
+    streamImg.addEventListener('pointercancel', (e) => {
+      if (!isTracking) return;
+      isTracking = false;
+    });
+
+    // 双指缩放手势识别 (Pinch to Zoom)
+    let initialPinchDist = null;
+    let lastPinchTrigger = 0;
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length === 2) {
+        const p1 = getRelativeCoords(e.touches[0].clientX, e.touches[0].clientY);
+        const p2 = getRelativeCoords(e.touches[1].clientX, e.touches[1].clientY);
+        initialPinchDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches.length === 2) {
+        const p1 = getRelativeCoords(e.touches[0].clientX, e.touches[0].clientY);
+        const p2 = getRelativeCoords(e.touches[1].clientX, e.touches[1].clientY);
+        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        const midX = Math.round((p1.x + p2.x) / 2);
+        const midY = Math.round((p1.y + p2.y) / 2);
+
+        if (initialPinchDist !== null) {
+          const now = performance.now();
+          if (now - lastPinchTrigger > 160) {
+            const delta = dist - initialPinchDist;
+            if (delta > 22) {
+              sendTouch('zoom', midX, midY, '&dir=in');
+              initialPinchDist = dist;
+              lastPinchTrigger = now;
+            } else if (delta < -22) {
+              sendTouch('zoom', midX, midY, '&dir=out');
+              initialPinchDist = dist;
+              lastPinchTrigger = now;
+            }
+          }
+        }
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (!e.touches || e.touches.length < 2) {
+        initialPinchDist = null;
+      }
+    });
+
+    // 延迟 Ping 检测
+    setInterval(() => {
+      const t0 = performance.now();
+      fetch(apiPrefix + '/ping')
+        .then(() => {
+          statPing.innerText = Math.round(performance.now() - t0);
+        })
+        .catch(() => {
+          statPing.innerText = '--';
+        });
+    }, 2500);
+  </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# 编译临时目录与产物
+build/
+bin/
+gen/
+*.class
+*.dex
+*.zip
+*.idsig
+
+# 私钥与签名文件
+*.keystore
+*.jks
+
+# IDE 与操作系统文件
+.idea/
+.gradle/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# 运行时临时文件与日志
+scratch/
+*.log
+*.tmp
+*.png.bak

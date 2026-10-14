@@ -1,0 +1,97 @@
+#!/system/bin/sh
+################################################################################
+# Tesla CarWith Box - KernelSU / Magisk Installer
+# Parameters: $1 = API, $2 = OUTFD, $3 = ZIPFILE
+################################################################################
+
+OUTFD=$2
+ZIPFILE=$3
+
+ui_print() {
+  if [ -n "$OUTFD" ]; then
+    echo "ui_print $1" >&$OUTFD
+    echo "ui_print" >&$OUTFD
+  else
+    echo "$1"
+  fi
+}
+
+ui_print "****************************************"
+ui_print "  Tesla CarWith Box (KernelSU 模块)     "
+ui_print "  0 硬件成本 · 车载虚拟显示与串流中继   "
+ui_print "****************************************"
+
+TMPDIR="/dev/ksu_tesla_install"
+rm -rf "$TMPDIR"
+mkdir -p "$TMPDIR"
+
+ui_print "- 解压模块核心组件..."
+unzip -o "$ZIPFILE" -x 'META-INF/*' -d "$TMPDIR" >&2
+
+if [ -f "$TMPDIR/module.prop" ]; then
+  eval $(grep '^id=' "$TMPDIR/module.prop")
+else
+  ui_print "! 错误：未检测到 module.prop！"
+  exit 1
+fi
+
+MODPATH="/data/adb/modules/$id"
+rm -rf "$MODPATH"
+mkdir -p "$MODPATH"
+
+cp -af "$TMPDIR"/. "$MODPATH/"
+rm -rf "$TMPDIR"
+
+ui_print "- 正在配置执行权限与 WebUI 运行环境..."
+chmod 0755 "$MODPATH"
+chmod -R 0755 "$MODPATH/webroot"
+chmod -R 0755 "$MODPATH/scripts"
+chmod -R 0755 "$MODPATH/webroot/cgi-bin" 2>/dev/null
+chmod 0755 "$MODPATH/service.sh"
+chmod 0755 "$MODPATH/action.sh" 2>/dev/null
+chmod -R 0755 "$MODPATH/apps" 2>/dev/null
+chcon -R u:object_r:system_file:s0 "$MODPATH/webroot" 2>/dev/null
+
+# 清理任何残留的 hosts 挂载与旧全局重定向规则
+umount /system/etc/hosts 2>/dev/null
+umount /etc/hosts 2>/dev/null
+for dev in wlan2 swlan0 ap0 softap0 wlan1 rndis0 wlan0; do
+  while iptables -t nat -D PREROUTING -i "$dev" -p udp --dport 53 -j REDIRECT --to-ports 5354 2>/dev/null; do :; done
+  while iptables -t nat -D PREROUTING -i "$dev" -p tcp --dport 80 -j REDIRECT --to-ports 8080 2>/dev/null; do :; done
+done
+while iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5354 2>/dev/null; do :; done
+while iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8080 2>/dev/null; do :; done
+ip addr add 101.200.208.6/32 dev lo 2>/dev/null
+
+# 彻底清理残留 CarBox 多用户，防止双实例端口抢占导致 CarWith 掉线
+for uid in $(pm list users 2>/dev/null | grep -i "CarBox" | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+'); do
+  am stop-user -w "$uid" 2>/dev/null
+  pm remove-user "$uid" 2>/dev/null
+done
+pm enable --user 0 com.baidu.carlife.xiaomi 2>/dev/null
+
+ui_print "- 正在初始化车载运行环境..."
+# 确保模块数据存储目录存在并清理模拟悬浮小窗口
+mkdir -p /data/adb/tesla_box
+settings put global overlay_display_devices "" 2>/dev/null
+settings delete global overlay_display_devices 2>/dev/null
+
+if [ -f "$MODPATH/apps/CarLifeVehicle.apk" ]; then
+  ui_print "- 正在自动安装百度 CarLife+ 车机端组件 (com.baidu.carlifevehicle)..."
+  pm install -r "$MODPATH/apps/CarLifeVehicle.apk" >/dev/null 2>&1
+  pm grant com.baidu.carlifevehicle android.permission.RECORD_AUDIO 2>/dev/null
+  pm grant com.baidu.carlifevehicle android.permission.ACCESS_FINE_LOCATION 2>/dev/null
+  pm grant com.baidu.carlifevehicle android.permission.ACCESS_COARSE_LOCATION 2>/dev/null
+  pm grant com.baidu.carlifevehicle android.permission.READ_PHONE_STATE 2>/dev/null
+fi
+if [ -f "$MODPATH/apps/CarWithVirtualizer.apk" ]; then
+  ui_print "- 正在自动安装虚拟网卡/蓝牙 LSPosed 注入模块..."
+  pm install -r "$MODPATH/apps/CarWithVirtualizer.apk" >/dev/null 2>&1
+fi
+
+ui_print "- 安装成功！"
+ui_print "  作者: 一缕微光（QQ：867836055）"
+ui_print "  请进入 KernelSU 管理器打开该模块的 WebUI 控制台。"
+ui_print "****************************************"
+
+exit 0

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.tesla.carwith.virtualizer"
+    android:versionCode="1"
+    android:versionName="1.0.0">
+
+    <application
+        android:label="CarWith 虚拟车机信号注入"
+        android:hasCode="true">
+
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="专为小米 CarWith 作用域提供虚拟车机 BLE 广播与局域网通道注入（不影响全局系统）" />
+        <meta-data
+            android:name="xposedminversion"
+            android:value="93" />
+        <meta-data
+            android:name="xposedscope"
+            android:resource="@array/xposed_scope" />
+    </application>
+</manifest>

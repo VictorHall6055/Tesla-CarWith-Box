@@ -1,0 +1,33 @@
+#!/system/bin/sh
+echo "Content-Type: application/json"
+echo "Access-Control-Allow-Origin: *"
+echo ""
+action=$(echo "$QUERY_STRING" | grep -oE '(^|&)action=[^&]+' | cut -d'=' -f2)
+x=$(echo "$QUERY_STRING" | grep -oE '(^|&)x=[0-9]+' | cut -d'=' -f2)
+y=$(echo "$QUERY_STRING" | grep -oE '(^|&)y=[0-9]+' | cut -d'=' -f2)
+
+disp_id=$(dumpsys display 2>/dev/null | grep -E 'Display [0-9]+:' -A 2 | grep -B 2 'com\.miui\.carlink(' | grep -oE 'Display [0-9]+' | head -n 1 | cut -d' ' -f2)
+[ -z "$disp_id" ] && disp_id=12
+
+if [ "$action" = "tap" ]; then
+  input -d "$disp_id" tap "$x" "$y" 2>/dev/null
+elif [ "$action" = "down" ]; then
+  input -d "$disp_id" motionevent DOWN "$x" "$y" 2>/dev/null
+elif [ "$action" = "move" ]; then
+  input -d "$disp_id" motionevent MOVE "$x" "$y" 2>/dev/null
+elif [ "$action" = "up" ]; then
+  input -d "$disp_id" motionevent UP "$x" "$y" 2>/dev/null
+elif [ "$action" = "swipe" ]; then
+  x1=$(echo "$QUERY_STRING" | grep -oE '(^|&)x1=[0-9]+' | cut -d'=' -f2)
+  y1=$(echo "$QUERY_STRING" | grep -oE '(^|&)y1=[0-9]+' | cut -d'=' -f2)
+  x2=$(echo "$QUERY_STRING" | grep -oE '(^|&)x2=[0-9]+' | cut -d'=' -f2)
+  y2=$(echo "$QUERY_STRING" | grep -oE '(^|&)y2=[0-9]+' | cut -d'=' -f2)
+  dur=$(echo "$QUERY_STRING" | grep -oE '(^|&)dur=[0-9]+' | cut -d'=' -f2)
+  [ -z "$dur" ] && dur=250
+  input -d "$disp_id" swipe "$x1" "$y1" "$x2" "$y2" "$dur" 2>/dev/null
+elif [ "$action" = "zoom" ]; then
+  input -d "$disp_id" tap "$x" "$y" 2>/dev/null
+  sleep 0.06
+  input -d "$disp_id" tap "$x" "$y" 2>/dev/null
+fi
+echo '{"status":"ok"}'

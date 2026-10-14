@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Tesla CarWith Box - 小米澎湃车联控制中心</title>
+  <style>
+    :root, [data-theme="dark"] {
+      --bg-color: #0b0c0f;
+      --card-bg: rgba(22, 23, 28, 0.76);
+      --card-elevated: rgba(30, 32, 38, 0.90);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-active: rgba(0, 122, 255, 0.5);
+      --text-primary: #ffffff;
+      --text-secondary: #8c909c;
+      --text-tertiary: #525662;
+      --accent-blue: #007aff;
+      --accent-blue-rgb: 0, 122, 255;
+      --accent-blue-soft: rgba(0, 122, 255, 0.15);
+      --accent-blue-glow: rgba(0, 122, 255, 0.35);
+      --dock-bg: rgba(22, 23, 28, 0.82);
+      --dock-border: rgba(255, 255, 255, 0.14);
+      --dock-shadow: rgba(0, 0, 0, 0.5);
+      --dock-item-active: rgba(255, 255, 255, 0.12);
+      --success-green: #34c759;
+      --success-soft: rgba(52, 199, 89, 0.15);
+      --warning-orange: #ff9500;
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --font-family: -apple-system, "MiSans", "PingFang SC", system-ui, sans-serif;
+    }
+
+    [data-theme="light"] {
+      --bg-color: #f4f5f8;
+      --card-bg: rgba(255, 255, 255, 0.88);
+      --card-elevated: #ffffff;
+      --card-border: rgba(0, 0, 0, 0.06);
+      --card-border-active: rgba(0, 102, 255, 0.45);
+      --text-primary: #121418;
+      --text-secondary: #656975;
+      --text-tertiary: #9ea2b0;
+      --accent-blue: #0066ff;
+      --accent-blue-rgb: 0, 102, 255;
+      --accent-blue-soft: rgba(0, 102, 255, 0.1);
+      --accent-blue-glow: rgba(0, 102, 255, 0.22);
+      --dock-bg: rgba(255, 255, 255, 0.88);
+      --dock-border: rgba(0, 0, 0, 0.08);
+      --dock-shadow: rgba(0, 0, 0, 0.12);
+      --dock-item-active: rgba(0, 102, 255, 0.12);
+      --success-green: #28a745;
+      --success-soft: rgba(40, 167, 69, 0.12);
+      --warning-orange: #f57c00;
+    }
+
+    @media (prefers-color-scheme: light) {
+      [data-theme="auto"] {
+        --bg-color: #f4f5f8;
+        --card-bg: rgba(255, 255, 255, 0.88);
+        --card-elevated: #ffffff;
+        --card-border: rgba(0, 0, 0, 0.06);
+        --card-border-active: rgba(0, 102, 255, 0.45);
+        --text-primary: #121418;
+        --text-secondary: #656975;
+        --text-tertiary: #9ea2b0;
+        --accent-blue: #0066ff;
+        --accent-blue-rgb: 0, 102, 255;
+        --accent-blue-soft: rgba(0, 102, 255, 0.1);
+        --accent-blue-glow: rgba(0, 102, 255, 0.22);
+        --dock-bg: rgba(255, 255, 255, 0.88);
+        --dock-border: rgba(0, 0, 0, 0.08);
+        --dock-shadow: rgba(0, 0, 0, 0.12);
+        --dock-item-active: rgba(0, 102, 255, 0.12);
+        --success-green: #28a745;
+        --success-soft: rgba(40, 167, 69, 0.12);
+        --warning-orange: #f57c00;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      padding: calc(env(safe-area-inset-top, 20px) + 12px) 16px calc(env(safe-area-inset-bottom, 24px) + 86px);
+      line-height: 1.5;
+      overflow-x: hidden;
+      min-height: 100vh;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 顶部导航与品牌区 */
+    .hyper-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 0 4px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* 高级流线型矢量车标 */
+    .brand-insignia {
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(135deg, rgba(var(--accent-blue-rgb), 0.22), rgba(var(--accent-blue-rgb), 0.06));
+      border: 1px solid var(--card-border-active);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 18px var(--accent-blue-glow);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .brand-insignia svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: var(--accent-blue);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 2px 6px var(--accent-blue-glow));
+    }
+
+    .brand-titles h1 {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-titles h1 span.tag-pro {
+      font-size: 10px;
+      padding: 2px 7px;
+      background: var(--accent-blue);
+      color: #fff;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-titles p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background-color: var(--success-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(52, 199, 89, 0.6);
+      display: inline-block;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.8); }
+    }
+
+    /* 3 个主题切换选项 (跟随系统 / 浅色 / 深色) */
+    .theme-switcher {
+      display: flex;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 3px;
+      border-radius: 999px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .theme-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .theme-btn.active {
+      background: var(--accent-blue);
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 10px var(--accent-blue-glow);
+    }
+
+    /* 澎湃经典 Switch 开关 */
+    .hyper-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 28px;
+    }
+
+    .hyper-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .hyper-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(120, 120, 128, 0.32);
+      border-radius: 999px;
+      transition: 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .hyper-slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      transition: 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .hyper-switch input:checked + .hyper-slider {
+      background-color: var(--accent-blue);
+      box-shadow: 0 0 14px var(--accent-blue-glow);
+    }
+
+    .hyper-switch input:checked + .hyper-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* 卡片通用样式 */
+    .hyper-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl);
+      padding: 18px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      transition: all 0.25s ease;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title h2 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+
+    .card-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .badge-online {
+      background: var(--success-soft);
+      color: var(--success-green);
+      border: 1px solid rgba(52, 199, 89, 0.25);
+    }
+
+    .badge-blue {
+      background: var(--accent-blue-soft);
+      color: var(--accent-blue);
+      border: 1px solid rgba(var(--accent-blue-rgb), 0.25);
+    }
+
+    /* 状态属性行 */
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 13px;
+    }
+
+    .status-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .status-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .status-val {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* 网址卡片 */
+    .url-display-box {
+      background: var(--card-elevated);
+      border: 1px dashed var(--card-border-active);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 12px;
+      margin-bottom: 14px;
+    }
+
+    .url-text-wrap {
+      overflow: hidden;
+    }
+
+    .url-title {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .url-string {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    /* 大按钮与快捷按钮 */
+    .hyper-btn-primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-blue), #258bff);
+      color: #ffffff;
+      border: none;
+      padding: 13px 20px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 18px var(--accent-blue-glow);
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+      text-decoration: none;
+    }
+
+    .hyper-btn-primary:active {
+      transform: scale(0.97);
+      filter: brightness(0.92);
+    }
+
+    .hyper-btn-secondary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--card-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--card-border);
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .hyper-btn-secondary:active {
+      transform: scale(0.96);
+      background: var(--accent-blue-soft);
+      border-color: var(--accent-blue);
+    }
+
+    .hyper-select {
+      background: var(--card-elevated);
+      border: 1px solid var(--card-border);
+      color: var(--text-primary);
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      width: 100%;
+      outline: none;
+      margin-top: 8px;
+    }
+
+    /* 单选卡片 */
+    .option-card {
+      background: var(--card-elevated);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .option-card:hover {
+      border-color: var(--card-border-active);
+    }
+
+    .option-card.selected {
+      border-color: var(--accent-blue);
+      background: linear-gradient(135deg, rgba(var(--accent-blue-rgb), 0.12), rgba(var(--accent-blue-rgb), 0.04));
+      box-shadow: 0 4px 20px var(--accent-blue-glow);
+    }
+
+    .radio-pill {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--text-secondary);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .option-card.selected .radio-pill {
+      border-color: var(--accent-blue);
+      background: var(--accent-blue);
+    }
+
+    .radio-pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ffffff;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .option-card.selected .radio-pill-dot {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .option-info h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .option-info p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .hyper-tip {
+      background: var(--card-elevated);
+      border-left: 3.5px solid var(--accent-blue);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-top: 12px;
+    }
+
+    .hyper-tip b {
+      color: var(--text-primary);
+    }
+
+    .hyper-tip code {
+      background: rgba(var(--accent-blue-rgb), 0.15);
+      color: var(--accent-blue);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* 悬浮液态玻璃底栏 (Floating Liquid-Glass Bottom Dock) */
+    .liquid-glass-dock {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 16px) + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 440px;
+      background: var(--dock-bg);
+      border: 1px solid var(--dock-border);
+      border-radius: 999px;
+      padding: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(32px) saturate(200%);
+      -webkit-backdrop-filter: blur(32px) saturate(200%);
+      box-shadow: 0 16px 40px var(--dock-shadow);
+      z-index: 999;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .dock-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 8px 4px;
+      background: transparent;
+      border: none;
+      border-radius: 999px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .dock-tab svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .dock-tab span {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    .dock-tab.active {
+      color: var(--accent-blue);
+      background: var(--dock-item-active);
+    }
+
+    .dock-tab.active svg {
+      transform: scale(1.12);
+    }
+
+    /* 视图切换 */
+    .tab-view {
+      display: none;
+      animation: fadeIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .tab-view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .author-card {
+      background: linear-gradient(135deg, rgba(var(--accent-blue-rgb), 0.15), rgba(var(--accent-blue-rgb), 0.04));
+      border: 1px solid var(--card-border-active);
+      border-radius: var(--radius-xl);
+      padding: 18px;
+      text-align: center;
+      margin-top: 14px;
+    }
+
+    .author-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-blue);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 12px var(--accent-blue-glow);
+    }
+
+    .author-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .author-qq {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      margin-top: 6px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部状态栏与品牌 -->
+  <header class="hyper-header">
+    <div class="brand-wrap">
+      <!-- 极客定制：流线型矢量车标 -->
+      <div class="brand-insignia">
+        <svg viewBox="0 0 24 24">
+          <path d="M5 17h14M3 13l2-6h14l2 6M6 13a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+          <path d="M9 8h6M10 5l2-2 2 2" />
+        </svg>
+      </div>
+      <div class="brand-titles">
+        <h1>Tesla CarWith Box <span class="tag-pro">v5.2</span></h1>
+        <p><span class="pulse-dot"></span> 独立虚拟车机引擎 · 就绪</p>
+      </div>
+    </div>
+
+    <!-- 3 个主题切换选项 -->
+    <div class="theme-switcher">
+      <button class="theme-btn" id="btn-theme-auto" onclick="setTheme('auto')">🌓 自动</button>
+      <button class="theme-btn" id="btn-theme-light" onclick="setTheme('light')">☀️ 浅色</button>
+      <button class="theme-btn" id="btn-theme-dark" onclick="setTheme('dark')">🌙 深色</button>
+    </div>
+  </header>
+
+  <!-- ================= 标签 1: 车载串流与中枢 ================= -->
+  <main id="view-hub" class="tab-view active">
+    
+    <!-- 串流主卡片 (保留完整的开关与状态) -->
+    <div class="hyper-card">
+      <div class="card-head">
+        <div class="card-title">
+          <h2>特斯拉 Web 串流引擎</h2>
+          <span id="badge-stream" class="card-badge badge-online">运行中</span>
+        </div>
+        <label class="hyper-switch">
+          <input type="checkbox" id="switch-server" checked onchange="toggleServer(this.checked)" />
+          <span class="hyper-slider"></span>
+        </label>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label">当前运行模式</span>
+        <span id="label-mode" class="status-val" style="color:var(--success-green);">CarWith 独立副屏</span>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label">车机分辨率</span>
+        <span id="label-res" class="status-val">1280x720 (车载黄金标准)</span>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label">监听端口</span>
+        <span id="label-port" class="status-val">8080 (免端口 80 自动重定向)</span>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label">音频流转策略</span>
+        <span id="label-audio" class="status-val">虚拟车机 / 蓝牙 / 本机自由流转</span>
+      </div>
+
+      <!-- 特斯拉访问地址 -->
+      <div class="url-display-box">
+        <div class="url-text-wrap">
+          <div class="url-title">车机浏览器访问网址 (已映射虚拟公网 IP · 彻底绕过特斯拉私网拦截)</div>
+          <div class="url-string" id="tesla-url">http://t.carwith.com</div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">车机大屏优先输入：<b style="color:var(--accent-blue);" id="tesla-ip-url">http://t.carwith.com</b> 或备用公网直连：<b style="color:var(--accent-blue);" id="tesla-backup-ip">http://101.200.208.6</b></div>
+        </div>
+        <button class="hyper-btn-secondary" style="padding: 7px 12px;" onclick="copyUrl()">📋 复制</button>
+      </div>
+
+      <a id="preview-link" href="/tesla" target="_blank" class="hyper-btn-primary">
+        🖥️ 进入车载大屏视图
+      </a>
+    </div>
+
+    <!-- 车载副屏硬件规格 (新增挂挡行驶分屏 + 状态持久化) -->
+    <div class="hyper-card">
+      <div class="card-head">
+        <div class="card-title">
+          <h2>车载大屏规格与挂挡自适应</h2>
+          <span class="card-badge badge-blue">已持久化</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 6px;">
+        <label class="status-label" style="display:block; margin-bottom:4px;">适配分辨率选择（已关闭辅助镜像浮窗，无残留）：</label>
+        <select id="select-res" class="hyper-select" onchange="changeResolution(this.value)">
+          <option value="1280x800">1280 × 800 (Tesla 挂挡行驶 · 16:10 黄金分屏)</option>
+          <option value="1280x720" selected>1280 × 720 (Tesla 挂挡行驶 · 16:9 标准分屏 · 推荐)</option>
+          <option value="auto">auto (动态自适应 · 随分屏大小自动贴合)</option>
+          <option value="1920x1080">1920 × 1080 (Tesla P档驻车 · 1080P 全屏模式)</option>
+          <option value="1920x1200">1920 × 1200 (Tesla 焕新版 P档 · 16:10 宽幕旗舰)</option>
+        </select>
+      </div>
+
+      <div class="hyper-tip">
+        <b>💡 特斯拉挂挡行驶说明：</b> 由于特斯拉在挂挡（D/R/N档）后限制浏览器无法全屏，强烈推荐选择 <code>1280x800</code> 或 <code>1280x720</code>，或在车机视图点击【↔️ 挂挡自适应】按钮，完美贴合右侧窗口且无黑边。
+      </div>
+    </div>
+
+    <!-- 自定义车辆名称与协议广播 (满足用户需求) -->
+    <div class="hyper-card">
+      <div class="card-head">
+        <div class="card-title">
+          <h2>自定义车载广播名称</h2>
+          <span class="card-badge badge-blue">实时生效</span>
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">
+        修改 CarWith 搜索连接时显示的车辆名称，保存后自动刷新广播信号：
+      </p>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <input id="input-vehicle-name" class="hyper-select" style="margin-top:0; flex:1;" type="text" placeholder="例如: Tesla Model Y" value="Tesla Model Y" />
+        <button class="hyper-btn-secondary" style="white-space:nowrap; padding: 0 16px;" onclick="saveVehicleName()">保存名称</button>
+      </div>
+
+      <!-- 快捷预设芯片 -->
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+        <button class="theme-btn" style="border:1px solid var(--card-border);" onclick="setVehicleNamePreset('Tesla Model Y')">Tesla Model Y</button>
+        <button class="theme-btn" style="border:1px solid var(--card-border);" onclick="setVehicleNamePreset('Tesla Model 3')">Tesla Model 3</button>
+        <button class="theme-btn" style="border:1px solid var(--card-border);" onclick="setVehicleNamePreset('Xiaomi SU7-Tesla')">Xiaomi SU7-Tesla</button>
+        <button class="theme-btn" style="border:1px solid var(--card-border);" onclick="setVehicleNamePreset('CyberTruck')">CyberTruck</button>
+      </div>
+
+      <div style="margin-top: 12px; display: flex; gap: 10px;">
+        <button class="hyper-btn" style="flex:1;" onclick="startCarLifeComponent()">🚀 一键连接 / 唤起 CarWith</button>
+      </div>
+
+      <div class="hyper-tip">
+        <b>💡 连接贴士：</b> 点击上方按钮将自动激活后台 7240 车机协议组件，并直接在手机前端打开 CarWith 投屏界面。
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= 标签 2: 音频与通话策略 ================= -->
+  <main id="view-audio" class="tab-view">
+    <div class="hyper-card">
+      <div class="card-head">
+        <div class="card-title">
+          <h2>音频流转与通话模式</h2>
+          <span class="card-badge badge-online">永久保存</span>
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+        已全面适配澎湃OS4系统控制中心播控卡片，声音可在【本机】、【虚拟车机】、【蓝牙设备】之间任意自由切换：
+      </p>
+
+      <!-- 选项 1: 虚拟车机通道音频 (CarLife Audio) -->
+      <div id="card-audio-virtual" class="option-card selected" onclick="chooseAudioMode('virtual')">
+        <div class="radio-pill">
+          <div class="radio-pill-dot"></div>
+        </div>
+        <div class="option-info">
+          <h3>虚拟车机通道音频 (开启车机音频设备 · 推荐)</h3>
+          <p>激活车载独立音频通道。连接后在澎湃OS4下拉控制中心播控卡片右上角，可在【本机】、【虚拟车机】与【蓝牙设备】三者间随意自由流转切换！亦支持特斯拉网页端直接发声。</p>
+        </div>
+      </div>
+
+      <!-- 选项 2: 特斯拉原厂蓝牙 (纯蓝牙直连) -->
+      <div id="card-audio-native" class="option-card" onclick="chooseAudioMode('native')">
+        <div class="radio-pill">
+          <div class="radio-pill-dot"></div>
+        </div>
+        <div class="option-info">
+          <h3>特斯拉原厂蓝牙直连 (纯蓝牙直连)</h3>
+          <p>音乐音频直达特斯拉 14 扬声器原厂音响，电话使用车顶天花板麦克风清晰免提，方向盘滚轮直接切歌。投屏仅负责画面与触控，兼顾高保真与零延迟。</p>
+        </div>
+      </div>
+
+      <div class="hyper-tip">
+        <b>🎯 澎湃OS4 自由流转与连接最佳实践：</b><br>
+        1. 手机蓝牙与特斯拉中控原厂蓝牙正常配对；<br>
+        2. 手机开启个人热点，特斯拉中控屏幕 Wi-Fi 连接手机热点；<br>
+        3. 打开特斯拉中控屏自带浏览器，访问 <code>http://t.carwith.com</code>；<br>
+        4. 音乐播放时，在手机顶部下拉控制中心播放卡片右上角，可随意点选【本机】、【虚拟车机】或【蓝牙设备】自由切换输出！
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= 标签 3: 高级调校与自愈 ================= -->
+  <main id="view-settings" class="tab-view">
+    <!-- 热点与防火墙卡片 -->
+    <div class="hyper-card">
+      <div class="card-head">
+        <div class="card-title">
+          <h2>热点通行与服务自愈</h2>
+          <span class="card-badge badge-online">防拦截守护</span>
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+        若其他设备连入手机热点后打不开网址，点击下方按钮一键放行端口：
+      </p>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+        <button class="hyper-btn-secondary" style="flex: 1;" onclick="unblockHotspot()">🛡️ 放行热点防火墙</button>
+        <button class="hyper-btn-secondary" style="flex: 1;" onclick="restartService()">🔄 一键重启中继</button>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="hyper-btn-secondary" style="flex: 1;" onclick="cleanOverlayDisplay()">🧹 清理浮窗残影</button>
+        <button class="hyper-btn-secondary" style="flex: 1;" onclick="dismissPermission()">🛡️ 自动跳过权限窗</button>
+      </div>
+    </div>
+
+    <!-- 触控手势优化说明 -->
+    <div class="hyper-card">
+      <div class="card-head">
+        <div class="card-title">
+          <h2>触控反控手势引擎</h2>
+          <span class="card-badge badge-blue">v4.3 升级</span>
+        </div>
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+        • <b>单点轻触</b>：启动应用、高德/百度地图选点；<br>
+        • <b>惯性滑动 (Swipe)</b>：支持地图平移、歌单上下滚动，系统级原生惯性阻尼；<br>
+        • <b>双指捏合缩放 (Pinch)</b>：屏幕双指张开放大、捏合缩小；亦可使用车机大屏右下角悬浮 <b>+ / −</b> 玻璃按钮放大缩小。
+      </p>
+    </div>
+  </main>
+
+  <!-- ================= 标签 4: 关于模块与作者 ================= -->
+  <main id="view-about" class="tab-view">
+    <div class="hyper-card">
+      <div class="card-head">
+        <div class="card-title">
+          <h2>关于 Tesla CarWith Box</h2>
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px;">
+        专为小米 HyperOS 4.0 / Android 17 量身定制，0 硬件成本实现高帧率无线投屏、独立后台运行、挂挡自适应与低延迟反向触控。
+      </p>
+
+      <div class="status-row">
+        <span class="status-label">模块版本</span>
+        <span class="status-val">5.2</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">适配车机</span>
+        <span class="status-val">Tesla Model 3 / Y / S / X 全系</span>
+      </div>
+    </div>
+
+    <!-- 作者专属署名卡 -->
+    <div class="author-card">
+      <div class="author-badge">✨ 模块核心开发者</div>
+      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">一缕微光</h3>
+      <p class="author-desc">专注小米澎湃车联与车载极客生态深度适配</p>
+      <div class="author-qq">QQ：867836055</div>
+    </div>
+  </main>
+
+  <!-- 悬浮液态玻璃底栏 (Floating Liquid-Glass Bottom Dock) -->
+  <nav class="liquid-glass-dock">
+    <button class="dock-tab active" onclick="switchView('hub', this)">
+      <svg viewBox="0 0 24 24">
+        <rect x="5" y="2" width="14" height="20" rx="3" />
+        <line x1="12" y1="18" x2="12" y2="18.01" />
+      </svg>
+      <span>车载中枢</span>
+    </button>
+
+    <button class="dock-tab" onclick="switchView('audio', this)">
+      <svg viewBox="0 0 24 24">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+      </svg>
+      <span>音频流转</span>
+    </button>
+
+    <button class="dock-tab" onclick="switchView('settings', this)">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06-.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+      <span>高级调校</span>
+    </button>
+
+    <button class="dock-tab" onclick="switchView('about', this)">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+      </svg>
+      <span>关于</span>
+    </button>
+  </nav>
+
+  <script>
+    const CTRL = '/data/adb/modules/tesla_carwith_box/scripts/tesla_control.sh';
+    const API_BASE = (window.location && window.location.port === '8080') ? '' : 'http://127.0.0.1:8080';
+
+    async function run(cmd) {
+      const ksuApi = (typeof window !== 'undefined' && window.ksu) ? window.ksu : (typeof ksu !== 'undefined' ? ksu : null);
+      if (ksuApi && typeof ksuApi.exec === 'function') {
+        try {
+          const res = await ksuApi.exec(cmd);
+          if (typeof res === 'string') return res;
+          if (res && res.stdout !== undefined) return res.stdout;
+          return JSON.stringify(res);
+        } catch(e) {}
+      }
+      try {
+        const r = await fetch('/api/exec?cmd=' + encodeURIComponent(cmd));
+        return await r.text();
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function toast(msg) {
+      const ksuApi = (typeof window !== 'undefined' && window.ksu) ? window.ksu : (typeof ksu !== 'undefined' ? ksu : null);
+      if (ksuApi && typeof ksuApi.toast === 'function') {
+        ksuApi.toast(msg);
+      } else {
+        alert(msg);
+      }
+    }
+
+    // 主题切换逻辑
+    window.setTheme = function(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('hyper_theme', theme);
+
+      document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('btn-theme-' + theme);
+      if (activeBtn) activeBtn.classList.add('active');
+    };
+
+    const savedTheme = localStorage.getItem('hyper_theme') || 'auto';
+    setTheme(savedTheme);
+
+    // 标签页切换
+    window.switchView = function(viewId, btn) {
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.dock-tab').forEach(b => b.classList.remove('active'));
+
+      const targetView = document.getElementById('view-' + viewId);
+      if (targetView) targetView.classList.add('active');
+      if (btn) btn.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // 服务开关
+    window.toggleServer = async function(on) {
+      if (on) {
+        await run(`${CTRL} start_server 8080`);
+        document.getElementById('badge-stream').innerText = '运行中';
+        document.getElementById('badge-stream').className = 'card-badge badge-online';
+        toast('特斯拉串流中继服务已启动');
+      } else {
+        await run(`${CTRL} stop_server`);
+        document.getElementById('badge-stream').innerText = '已停止';
+        document.getElementById('badge-stream').className = 'card-badge';
+        toast('串流服务已停止');
+      }
+      refreshStatus();
+    };
+
+    // 分辨率设置与持久化 (绝不再开模拟辅助屏)
+    window.changeResolution = async function(res) {
+      localStorage.setItem('tesla_resolution', res);
+      try { await fetch(API_BASE + '/api/res?val=' + encodeURIComponent(res)); } catch (e) {}
+      await run(`${CTRL} start_display ${res} 200`);
+      toast('分辨率已切换为 ' + res);
+      refreshStatus();
+    };
+
+    // 音频模式持久化
+    window.chooseAudioMode = async function(mode) {
+      document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+      const chosenCard = document.getElementById('card-audio-' + mode);
+      if (chosenCard) chosenCard.classList.add('selected');
+
+      localStorage.setItem('tesla_audio_mode', mode);
+      document.getElementById('label-audio').innerText = (mode === 'native') ? '车载原生 (推荐)' : '车机协议音频流';
+
+      try { await fetch(API_BASE + '/api/audio?mode=' + mode); } catch (e) {}
+      await run(`${CTRL} set_audio_mode ${mode}`);
+
+      toast(mode === 'native' ? '已选定：特斯拉原厂蓝牙（音乐与通话无损高保真）' : '已选定：车机协议音频流');
+    };
+
+    // 状态刷新 (优先使用后端真实持久化数据)
+    window.refreshStatus = async function() {
+      let d = {};
+      try {
+        const r = await fetch(API_BASE + '/api/status').catch(() => fetch('/cgi-bin/status'));
+        d = await r.json();
+      } catch (e) {}
+
+      if (!d.ip) {
+        try {
+          const raw = await run(`${CTRL} status`);
+          if (raw && raw.trim().startsWith('{')) {
+            d = Object.assign({}, d, JSON.parse(raw));
+          }
+        } catch (e) {}
+      }
+
+      try {
+        if (d.port) document.getElementById('label-port').innerText = d.port;
+
+        // 恢复保存的分辨率 (后端优先)
+        const savedRes = d.resolution || localStorage.getItem('tesla_resolution') || '1280x720';
+        document.getElementById('select-res').value = savedRes;
+        document.getElementById('label-res').innerText = savedRes;
+
+        // 恢复保存的音频模式 (后端优先)
+        const savedAudio = d.audio_mode || localStorage.getItem('tesla_audio_mode') || 'native';
+        document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+        const activeCard = document.getElementById('card-audio-' + savedAudio);
+        if (activeCard) activeCard.classList.add('selected');
+        document.getElementById('label-audio').innerText = (savedAudio === 'native') ? '车载原生 (推荐)' : '车机协议音频流';
+
+        // 恢复保存的车辆名称 (后端优先)
+        const savedVehicleName = d.vehicle_name || localStorage.getItem('tesla_vehicle_name') || 'Xiaomi SU7-Tesla';
+        const vInput = document.getElementById('input-vehicle-name');
+        if (vInput && document.activeElement !== vInput) {
+          vInput.value = savedVehicleName;
+        }
+
+        // 优先使用虚拟公网域名/IP，突破特斯拉车机对私有局域网 IP 的访问限制
+        const streamUrl = d.tesla_url || 'http://t.carwith.com';
+        const virtualIp = d.virtual_ip || '101.200.208.6';
+        document.getElementById('tesla-url').innerText = streamUrl;
+        const subIpElem = document.getElementById('tesla-ip-url');
+        if (subIpElem) subIpElem.innerText = streamUrl;
+        const subBackupElem = document.getElementById('tesla-backup-ip');
+        if (subBackupElem) subBackupElem.innerText = 'http://' + virtualIp;
+        document.getElementById('preview-link').href = '/tesla';
+
+      } catch (e) {}
+    };
+
+    // 自定义车辆广播名称 (写入底层配置文件 + 本地持久化)
+    window.saveVehicleName = async function() {
+      const input = document.getElementById('input-vehicle-name');
+      const name = (input ? input.value.trim() : '') || 'Xiaomi SU7-Tesla';
+      localStorage.setItem('tesla_vehicle_name', name);
+      try {
+        await fetch(API_BASE + '/api/vehicle_name?name=' + encodeURIComponent(name));
+      } catch (e) {}
+      await run(`${CTRL} set_vehicle_name "${name}"`);
+      toast('车辆名称已保存为: ' + name);
+      refreshStatus();
+    };
+
+    window.setVehicleNamePreset = function(presetName) {
+      const input = document.getElementById('input-vehicle-name');
+      if (input) input.value = presetName;
+      saveVehicleName();
+    };
+
+    // 一键启动车机端组件并直接在前端打开 CarWith 投屏
+    window.startCarLifeComponent = async function() {
+      toast('正在唤起 CarLife 与 CarWith 投屏界面...');
+      try { await fetch(API_BASE + '/api/start_carlife'); } catch (e) {}
+      await run(`${CTRL} launch_carwith`);
+      toast('CarWith 已唤起！');
+    };
+
+    // 放行热点防火墙
+    window.unblockHotspot = async function() {
+      toast('正在放行 Android 热点 8080 端口...');
+      try { await fetch(API_BASE + '/api/unblock'); } catch (e) {}
+      await run(`${CTRL} unblock_hotspot`);
+      toast('热点防火墙已放行！连入热点的设备即可打开网页');
+    };
+
+    // 清理遗留的模拟辅助屏小浮窗
+    window.cleanOverlayDisplay = async function() {
+      await run(`${CTRL} stop_display`);
+      toast('已彻底清理模拟辅助屏悬浮小窗口！');
+    };
+
+    // 重启服务
+    window.restartService = async function() {
+      toast('正在重启后台中继服务...');
+      await run(`${CTRL} stop_server`);
+      await run(`${CTRL} start_server 8080`);
+      toast('中继服务已重启！');
+      refreshStatus();
+    };
+
+    // 跳过权限弹窗
+    window.dismissPermission = async function() {
+      await fetch('/api/touch?action=tap&x=620&y=550').catch(() => {});
+      toast('已向副屏确认权限窗口');
+    };
+
+    // 复制网址
+    window.copyUrl = function() {
+      const url = document.getElementById('tesla-url').innerText;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          toast('车机访问网址已复制到剪贴板！');
+        }).catch(() => {
+          prompt('请复制车机访问网址：', url);
+        });
+      } else {
+        prompt('请复制车机访问网址：', url);
+      }
+    };
+
+    refreshStatus();
+    setInterval(refreshStatus, 3000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+#!/system/bin/sh
+echo "Content-Type: application/json"
+echo "Access-Control-Allow-Origin: *"
+echo ""
+/data/adb/modules/tesla_carwith_box/scripts/tesla_control.sh status

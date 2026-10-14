@@ -1,0 +1,5 @@
+#!/system/bin/sh
+echo "Content-Type: text/plain"
+echo "Access-Control-Allow-Origin: *"
+echo ""
+echo "pong"

@@ -1,0 +1,16 @@
+#!/system/bin/sh
+echo "Content-Type: multipart/x-mixed-replace; boundary=frame"
+echo "Cache-Control: no-cache, private"
+echo "Pragma: no-cache"
+echo "Access-Control-Allow-Origin: *"
+echo ""
+disp_id=$(dumpsys SurfaceFlinger 2>/dev/null | grep -B 2 -i "com.miui.carlink" | grep -oE 'Display [0-9]+' | head -n 1 | awk '{print $2}')
+[ -z "$disp_id" ] && disp_id=4
+while true; do
+  echo "--frame"
+  echo "Content-Type: image/png"
+  echo ""
+  screencap -d "$disp_id" -p 2>/dev/null || screencap -p
+  echo ""
+  sleep 0.04
+done
