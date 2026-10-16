@@ -793,25 +793,47 @@
         已全面适配澎湃OS4系统控制中心播控卡片，声音可在【本机】、【虚拟车机】、【蓝牙设备】之间任意自由切换：
       </p>
 
-      <!-- 选项 1: 虚拟车机通道音频 (CarLife Audio) -->
-      <div id="card-audio-virtual" class="option-card selected" onclick="chooseAudioMode('virtual')">
+      <!-- 选项 1: 系统级声音流转 (澎湃OS4 控制中心自适应 · 默认推荐) -->
+      <div id="card-audio-system" class="option-card selected" onclick="chooseAudioMode('system')">
         <div class="radio-pill">
           <div class="radio-pill-dot"></div>
         </div>
         <div class="option-info">
-          <h3>虚拟车机通道音频 (开启车机音频设备 · 推荐)</h3>
-          <p>激活车载独立音频通道。连接后在澎湃OS4下拉控制中心播控卡片右上角，可在【本机】、【虚拟车机】与【蓝牙设备】三者间随意自由流转切换！亦支持特斯拉网页端直接发声。</p>
+          <h3>系统级声音流转 (澎湃OS4 控制中心自由切换 · 默认推荐)</h3>
+          <p>无需重启手机！手机顶部下拉控制中心的播控卡片右上角，可在<b>【本机】</b>、<b>【车载蓝牙】</b>、<b>【虚拟车机】</b>三者间随意自由流转切换，即切即用，体验最佳。</p>
         </div>
       </div>
 
-      <!-- 选项 2: 特斯拉原厂蓝牙 (纯蓝牙直连) -->
+      <!-- 选项 2: 虚拟车机通道音频 (Web Audio 发声 · 手动) -->
+      <div id="card-audio-virtual" class="option-card" onclick="chooseAudioMode('virtual')">
+        <div class="radio-pill">
+          <div class="radio-pill-dot"></div>
+        </div>
+        <div class="option-info">
+          <h3>虚拟车机通道音频 (车机网页端发声 · 手动)</h3>
+          <p>强制所有音频通过协议直传虚拟车机，并在特斯拉车机浏览器 Web Audio 播放。适合非澎湃系统或无需配对车载蓝牙的用户。</p>
+        </div>
+      </div>
+
+      <!-- 选项 3: 特斯拉原厂蓝牙直连 (纯蓝牙直连 · 手动) -->
       <div id="card-audio-native" class="option-card" onclick="chooseAudioMode('native')">
         <div class="radio-pill">
           <div class="radio-pill-dot"></div>
         </div>
         <div class="option-info">
-          <h3>特斯拉原厂蓝牙直连 (纯蓝牙直连)</h3>
-          <p>音乐音频直达特斯拉 14 扬声器原厂音响，电话使用车顶天花板麦克风清晰免提，方向盘滚轮直接切歌。投屏仅负责画面与触控，兼顾高保真与零延迟。</p>
+          <h3>特斯拉原厂蓝牙直连 (原厂扬声器 · 手动)</h3>
+          <p>强制音乐音频直达特斯拉 14 扬声器原厂音响，电话使用车顶天花板麦克风清晰免提，方向盘滚轮直接切歌。投屏仅负责画面与触控，兼顾高保真与零延迟。</p>
+        </div>
+      </div>
+
+      <!-- 选项 4: 手机本机扬声器 (外放播放 · 手动) -->
+      <div id="card-audio-speaker" class="option-card" onclick="chooseAudioMode('speaker')">
+        <div class="radio-pill">
+          <div class="radio-pill-dot"></div>
+        </div>
+        <div class="option-info">
+          <h3>手机本机扬声器 (外放播放 · 手动)</h3>
+          <p>强制所有声音由手机自带喇叭独立播放，车机仅作显示和操作屏。适合车内有其他人休息或不便连接车载音响时使用。</p>
         </div>
       </div>
 
@@ -1017,17 +1039,31 @@
 
     // 音频模式持久化
     window.chooseAudioMode = async function(mode) {
-      document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+      document.querySelectorAll('#view-audio .option-card').forEach(c => c.classList.remove('selected'));
       const chosenCard = document.getElementById('card-audio-' + mode);
       if (chosenCard) chosenCard.classList.add('selected');
 
       localStorage.setItem('tesla_audio_mode', mode);
-      document.getElementById('label-audio').innerText = (mode === 'native') ? '车载原生 (推荐)' : '车机协议音频流';
+
+      let label = '系统级自由流转 (推荐)';
+      let msg = '已选定：系统级声音流转（即时生效，可在控制中心自由切换）';
+      if (mode === 'virtual') {
+        label = '虚拟车机 (网页发声)';
+        msg = '已选定：虚拟车机通道音频（即时生效，网页发声）';
+      } else if (mode === 'native') {
+        label = '原厂车载蓝牙';
+        msg = '已选定：特斯拉原厂蓝牙直连（即时生效，蓝牙音响发声）';
+      } else if (mode === 'speaker') {
+        label = '手机本机扬声器';
+        msg = '已选定：手机本机扬声器（即时生效，手机外放）';
+      }
+
+      document.getElementById('label-audio').innerText = label;
 
       try { await fetch(API_BASE + '/api/audio?mode=' + mode); } catch (e) {}
       await run(`${CTRL} set_audio_mode ${mode}`);
 
-      toast(mode === 'native' ? '已选定：特斯拉原厂蓝牙（音乐与通话无损高保真）' : '已选定：车机协议音频流');
+      toast(msg);
     };
 
     // 状态刷新 (优先使用后端真实持久化数据)
@@ -1056,11 +1092,15 @@
         document.getElementById('label-res').innerText = savedRes;
 
         // 恢复保存的音频模式 (后端优先)
-        const savedAudio = d.audio_mode || localStorage.getItem('tesla_audio_mode') || 'native';
-        document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+        const savedAudio = d.audio_mode || localStorage.getItem('tesla_audio_mode') || 'system';
+        document.querySelectorAll('#view-audio .option-card').forEach(c => c.classList.remove('selected'));
         const activeCard = document.getElementById('card-audio-' + savedAudio);
         if (activeCard) activeCard.classList.add('selected');
-        document.getElementById('label-audio').innerText = (savedAudio === 'native') ? '车载原生 (推荐)' : '车机协议音频流';
+        let label = '系统级自由流转 (推荐)';
+        if (savedAudio === 'virtual') label = '虚拟车机 (网页发声)';
+        else if (savedAudio === 'native') label = '原厂车载蓝牙';
+        else if (savedAudio === 'speaker') label = '手机本机扬声器';
+        document.getElementById('label-audio').innerText = label;
 
         // 恢复保存的车辆名称 (后端优先)
         const savedVehicleName = d.vehicle_name || localStorage.getItem('tesla_vehicle_name') || 'Xiaomi SU7-Tesla';

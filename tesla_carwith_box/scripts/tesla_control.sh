@@ -13,7 +13,7 @@ PID_FILE="$DATADIR/server.pid"
 DEFAULT_RES="1920x1080"
 DEFAULT_DPI="200"
 DEFAULT_PORT="8080"
-DEFAULT_AUDIO="virtual"
+DEFAULT_AUDIO="system"
 DEFAULT_VEHICLE="Xiaomi SU7-Tesla"
 
 load_config() {
@@ -259,19 +259,37 @@ EOF
     ;;
 
   set_audio_mode)
-    mode="${2:-native}"
+    mode="${2:-system}"
     AUDIO_MODE="$mode"
     save_config
     echo "$mode" > "$DATADIR/audio_mode" 2>/dev/null
     echo "$mode" > /data/local/tmp/carwith_audio_mode 2>/dev/null
-    T_MODE=1
+    chmod 0666 "$DATADIR/audio_mode" /data/local/tmp/carwith_audio_mode 2>/dev/null
+
     if [ "$mode" = "virtual" ] || [ "$mode" = "web" ]; then
+      echo "virtual" > /data/local/tmp/tesla_active_audio 2>/dev/null
+      T_MODE=0
+    elif [ "$mode" = "native" ] || [ "$mode" = "bluetooth" ]; then
+      echo "bluetooth" > /data/local/tmp/tesla_active_audio 2>/dev/null
+      T_MODE=1
+    elif [ "$mode" = "speaker" ]; then
+      echo "speaker" > /data/local/tmp/tesla_active_audio 2>/dev/null
+      T_MODE=1
+    else
+      # system mode (default)
+      echo "system" > /data/local/tmp/tesla_active_audio 2>/dev/null
       T_MODE=0
     fi
+    chmod 0666 /data/local/tmp/tesla_active_audio 2>/dev/null
+
     if [ -f /data/local/tmp/bdcf ]; then
       sed -i "s/^AUDIO_TRANSMISSION_MODE=.*/AUDIO_TRANSMISSION_MODE=$T_MODE/g" /data/local/tmp/bdcf 2>/dev/null
     fi
-    if [ "$mode" != "virtual" ] && [ "$mode" != "web" ]; then
+
+    # Broadcast audio mode change so running processes update dynamically without reboot!
+    am broadcast -a com.tesla.carwith.ACTION_AUDIO_MODE_CHANGED --es mode "$mode" >/dev/null 2>&1
+
+    if [ "$mode" != "virtual" ]; then
       service call audio 7 i32 3 i32 0 s16 default >/dev/null 2>&1
       cmd media_session volume --stream 3 --set 15 >/dev/null 2>&1
     fi

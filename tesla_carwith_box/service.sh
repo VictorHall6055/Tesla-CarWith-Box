@@ -68,7 +68,7 @@ done
 pm enable --user 0 com.baidu.carlife.xiaomi 2>/dev/null
 
 # 初始化车机音频配置 bdcf (支持澎湃OS4控制中心【本机】、【虚拟车机】、【车载蓝牙】自由流转切换)
-A_MODE=$(cat "$DATADIR/audio_mode" 2>/dev/null || echo "virtual")
+A_MODE=$(cat "$DATADIR/audio_mode" 2>/dev/null || echo "system")
 T_MODE=0
 if [ "$A_MODE" = "native" ] || [ "$A_MODE" = "bluetooth" ] || [ "$A_MODE" = "speaker" ]; then
   T_MODE=1

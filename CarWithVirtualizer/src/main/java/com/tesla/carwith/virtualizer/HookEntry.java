@@ -1639,7 +1639,74 @@ public class HookEntry implements IXposedHookLoadPackage {
         } catch (Throwable ignored) {}
     }
 
+    private static volatile long sLastCheckTime = 0;
+    private static volatile String sAudioModeCache = "system";
+
+    public static String getAudioModeConfig() {
+        long now = SystemClock.uptimeMillis();
+        if (now - sLastCheckTime > 500) {
+            sLastCheckTime = now;
+            try {
+                File f = new File("/data/adb/tesla_box/audio_mode");
+                if (!f.exists()) {
+                    f = new File("/data/local/tmp/carwith_audio_mode");
+                }
+                if (f.exists()) {
+                    BufferedReader br = new BufferedReader(new FileReader(f));
+                    String line = br.readLine();
+                    br.close();
+                    if (line != null && !line.trim().isEmpty()) {
+                        sAudioModeCache = line.trim().toLowerCase();
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return sAudioModeCache != null ? sAudioModeCache : "system";
+    }
+
+    private static volatile long sLastActiveCheckTime = 0;
+    private static volatile String sActiveAudioTargetCache = "system";
+
+    public static String getActiveAudioTarget() {
+        long now = SystemClock.uptimeMillis();
+        if (now - sLastActiveCheckTime > 500) {
+            sLastActiveCheckTime = now;
+            try {
+                File f = new File("/data/local/tmp/tesla_active_audio");
+                if (f.exists()) {
+                    BufferedReader br = new BufferedReader(new FileReader(f));
+                    String line = br.readLine();
+                    br.close();
+                    if (line != null && !line.trim().isEmpty()) {
+                        sActiveAudioTargetCache = line.trim().toLowerCase();
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return sActiveAudioTargetCache != null ? sActiveAudioTargetCache : "system";
+    }
+
+    public static void setActiveAudioTarget(final String target) {
+        sActiveAudioTargetCache = target;
+        sLastActiveCheckTime = SystemClock.uptimeMillis();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    File f = new File("/data/local/tmp/tesla_active_audio");
+                    FileWriter fw = new FileWriter(f, false);
+                    fw.write(target + "\n");
+                    fw.close();
+                    f.setReadable(true, false);
+                    f.setWritable(true, false);
+                } catch (Throwable ignored) {}
+            }
+        }).start();
+    }
+
     public static void setAudioModeConfig(final String mode) {
+        sAudioModeCache = mode;
+        sLastCheckTime = SystemClock.uptimeMillis();
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -1660,7 +1727,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                     f2.setReadable(true, false);
                     f2.setWritable(true, false);
 
-                    int val = (mode.contains("virtual") || mode.contains("web") || mode.equals("0")) ? 0 : 1;
+                    int val = ("virtual".equalsIgnoreCase(mode) || "system".equalsIgnoreCase(mode) || "auto".equalsIgnoreCase(mode)) ? 0 : 1;
                     File bdcf = new File("/data/local/tmp/bdcf");
                     if (bdcf.exists()) {
                         List<String> lines = new ArrayList<>();
@@ -1696,25 +1763,31 @@ public class HookEntry implements IXposedHookLoadPackage {
     }
 
     private static int getEffectiveAudioTransmissionMode() {
-        try {
-            File f = new File("/data/adb/tesla_box/audio_mode");
-            if (!f.exists()) {
-                f = new File("/data/local/tmp/carwith_audio_mode");
-            }
-            if (f.exists()) {
-                try (BufferedReader br = new BufferedReader(new FileReader(f))) {
-                    String line = br.readLine();
-                    if (line != null) {
-                        line = line.trim().toLowerCase();
-                        if (line.contains("native") || line.contains("bt") || line.contains("bluetooth") || line.contains("speaker") || line.equals("1")) {
-                            return 1; // 纯蓝牙直连模式 / 本机扬声器模式
-                        }
-                    }
-                }
-            }
-        } catch (Throwable ignored) {}
-        // 默认返回 0: 虚拟车机通道模式 (支持澎湃OS4播控中心【本机】、【虚拟车机】、【蓝牙设备】自由切换)
+        String mode = getAudioModeConfig();
+        if ("virtual".equalsIgnoreCase(mode)) {
+            return 0; // 虚拟车机通道
+        }
+        if ("native".equalsIgnoreCase(mode) || "bt".equalsIgnoreCase(mode) || "bluetooth".equalsIgnoreCase(mode) || "speaker".equalsIgnoreCase(mode) || "1".equals(mode)) {
+            return 1; // 纯蓝牙直连 / 本机扬声器
+        }
+        // 默认 "system" 模式: 协议协商保持 0 (车机音频通道激活)，由控制中心播控卡片实时分流
         return 0;
+    }
+
+    private static boolean shouldForwardPcmAudio() {
+        String modeConfig = getAudioModeConfig();
+        if ("virtual".equalsIgnoreCase(modeConfig)) {
+            return true;
+        }
+        if ("native".equalsIgnoreCase(modeConfig) || "bluetooth".equalsIgnoreCase(modeConfig) || "speaker".equalsIgnoreCase(modeConfig)) {
+            return false;
+        }
+        // 默认 "system" 模式: 查看用户当前在控制中心选中的是哪个设备
+        String active = getActiveAudioTarget();
+        if ("bluetooth".equalsIgnoreCase(active) || "speaker".equalsIgnoreCase(active)) {
+            return false;
+        }
+        return true;
     }
 
     private void hookCarlifeVehicleAudio(XC_LoadPackage.LoadPackageParam lpparam) {
@@ -1859,7 +1932,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         try {
-                            if (param.args != null && param.args.length >= 3) {
+                            if (shouldForwardPcmAudio() && param.args != null && param.args.length >= 3) {
                                 byte[] data = (byte[]) param.args[0];
                                 int offset = (Integer) param.args[1];
                                 int size = (Integer) param.args[2];
@@ -1874,7 +1947,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         try {
-                            if (param.args != null && param.args.length >= 3) {
+                            if (shouldForwardPcmAudio() && param.args != null && param.args.length >= 3) {
                                 byte[] data = (byte[]) param.args[0];
                                 int offset = (Integer) param.args[1];
                                 int size = (Integer) param.args[2];
@@ -1975,18 +2048,46 @@ public class HookEntry implements IXposedHookLoadPackage {
                     }
                 );
 
-                // getActiveDevice: If in virtual mode, return 虚拟车机
+                // getActiveDevice: Dynamic routing based on user selection in Control Center & module mode
                 XposedHelpers.findAndHookMethod(
                     a2dpClass,
                     "getActiveDevice",
                     new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            int mode = getEffectiveAudioTransmissionMode();
-                            if (mode == 0) { // 虚拟车机模式
-                                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-                                if (adapter != null) {
-                                    param.setResult(adapter.getRemoteDevice(VIRTUAL_MAC));
+                            String modeConfig = getAudioModeConfig();
+                            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                            if (adapter == null) return;
+                            BluetoothDevice mockDevice = adapter.getRemoteDevice(VIRTUAL_MAC);
+
+                            if ("virtual".equalsIgnoreCase(modeConfig)) {
+                                param.setResult(mockDevice);
+                                return;
+                            }
+                            if ("native".equalsIgnoreCase(modeConfig) || "bluetooth".equalsIgnoreCase(modeConfig)) {
+                                return; // return original real Bluetooth device
+                            }
+                            if ("speaker".equalsIgnoreCase(modeConfig)) {
+                                param.setResult(null);
+                                return;
+                            }
+
+                            // Default "system" mode: follow user's choice in HyperOS Control Center
+                            String activeTarget = getActiveAudioTarget();
+                            BluetoothDevice orig = (BluetoothDevice) param.getResult();
+
+                            if ("virtual".equalsIgnoreCase(activeTarget)) {
+                                param.setResult(mockDevice);
+                            } else if ("speaker".equalsIgnoreCase(activeTarget)) {
+                                param.setResult(null);
+                            } else if ("bluetooth".equalsIgnoreCase(activeTarget)) {
+                                if (orig != null && !VIRTUAL_MAC.equalsIgnoreCase(orig.getAddress())) {
+                                    param.setResult(orig);
+                                }
+                            } else {
+                                // Default / auto: keep original if connected, else mockDevice
+                                if (orig != null && !VIRTUAL_MAC.equalsIgnoreCase(orig.getAddress())) {
+                                    param.setResult(orig);
                                 }
                             }
                         }
@@ -2003,21 +2104,23 @@ public class HookEntry implements IXposedHookLoadPackage {
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             BluetoothDevice dev = (BluetoothDevice) param.args[0];
                             if (dev != null && VIRTUAL_MAC.equalsIgnoreCase(dev.getAddress())) {
-                                log("[SoundFlow] Switched to 【虚拟车机】 (Virtual Mode)");
-                                setAudioModeConfig("virtual");
+                                log("[SoundFlow] User switched to 【虚拟车机】");
+                                setActiveAudioTarget("virtual");
                                 param.setResult(true);
                             } else if (dev != null) {
-                                log("[SoundFlow] Switched to 【" + dev.getName() + "】 (Native BT Mode)");
-                                setAudioModeConfig("native");
+                                log("[SoundFlow] User switched to 【" + dev.getName() + "】 (Bluetooth)");
+                                setActiveAudioTarget("bluetooth");
+                                // Allow real Bluetooth device activation
                             } else {
-                                log("[SoundFlow] Switched to 【本机扬声器】 (Speaker Mode)");
-                                setAudioModeConfig("speaker");
+                                log("[SoundFlow] User switched to 【本机扬声器】 (Speaker)");
+                                setActiveAudioTarget("speaker");
+                                // Allow speaker activation
                             }
                         }
                     }
                 );
 
-                // isA2dpPlaying: If 虚拟车机, check if virtual mode active
+                // isA2dpPlaying: If 虚拟车机, check if virtual output is active
                 try {
                     XposedHelpers.findAndHookMethod(
                         a2dpClass,
@@ -2028,7 +2131,16 @@ public class HookEntry implements IXposedHookLoadPackage {
                             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                                 BluetoothDevice dev = (BluetoothDevice) param.args[0];
                                 if (dev != null && VIRTUAL_MAC.equalsIgnoreCase(dev.getAddress())) {
-                                    param.setResult(getEffectiveAudioTransmissionMode() == 0);
+                                    String modeConfig = getAudioModeConfig();
+                                    if ("virtual".equalsIgnoreCase(modeConfig)) {
+                                        param.setResult(true);
+                                    } else if ("native".equalsIgnoreCase(modeConfig) || "speaker".equalsIgnoreCase(modeConfig)) {
+                                        param.setResult(false);
+                                    } else {
+                                        // system mode
+                                        String active = getActiveAudioTarget();
+                                        param.setResult("virtual".equalsIgnoreCase(active));
+                                    }
                                 }
                             }
                         }
@@ -2173,20 +2285,47 @@ public class HookEntry implements IXposedHookLoadPackage {
                 XposedBridge.hookAllMethods(audioUtilClass, "isUSingBTForAudio", new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        int mode = getEffectiveAudioTransmissionMode();
-                        // mode != 0 表示 native 或 speaker，直接返回 true，让 Carlife 直通手机底层蓝牙/扬声器
-                        param.setResult(mode != 0);
+                        String modeConfig = getAudioModeConfig();
+                        if ("virtual".equalsIgnoreCase(modeConfig)) {
+                            param.setResult(false);
+                            return;
+                        }
+                        if ("native".equalsIgnoreCase(modeConfig) || "speaker".equalsIgnoreCase(modeConfig)) {
+                            param.setResult(true);
+                            return;
+                        }
+                        // system mode: check active audio target in Control Center
+                        String active = getActiveAudioTarget();
+                        if ("virtual".equalsIgnoreCase(active)) {
+                            param.setResult(false);
+                        } else {
+                            param.setResult(true);
+                        }
                     }
                 });
 
                 XposedBridge.hookAllMethods(audioUtilClass, "getAudioTransmissionMode", new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        int mode = getEffectiveAudioTransmissionMode();
-                        param.setResult(mode);
+                        String modeConfig = getAudioModeConfig();
+                        if ("virtual".equalsIgnoreCase(modeConfig)) {
+                            param.setResult(0);
+                            return;
+                        }
+                        if ("native".equalsIgnoreCase(modeConfig) || "speaker".equalsIgnoreCase(modeConfig)) {
+                            param.setResult(1);
+                            return;
+                        }
+                        // system mode: check active audio target in Control Center
+                        String active = getActiveAudioTarget();
+                        if ("virtual".equalsIgnoreCase(active)) {
+                            param.setResult(0);
+                        } else {
+                            param.setResult(1);
+                        }
                     }
                 });
-                log("[CarlifeXiaomi ✓] AudioUtil hooks applied.");
+                log("[CarlifeXiaomi ✓] AudioUtil hooks applied with dynamic routing.");
             }
         } catch (Throwable t) {
             log("[-] Error hooking AudioUtil: " + t.getMessage());
