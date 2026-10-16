@@ -1,6 +1,6 @@
 id=tesla_carwith_box
 name=Tesla CarWith Box
-version=5.2
-versionCode=520
+version=5.3
+versionCode=530
 author=一缕微光（QQ：867836055）
-description=CarWith虚拟蓝牙/WiFi直连转换、特斯拉浏览器原生HTML5高性能流式投屏与双向触控、原生特斯拉蓝牙音频直通+网页端PCM无损串流双模式、局域网全网卡自动放行。
+description=CarWith虚拟蓝牙/WiFi直连转换、特斯拉浏览器原生HTML5高性能流式投屏与双向触控、澎湃OS4系统级声音流转自适应与免重启即时切换、网页端PCM无损串流+原厂蓝牙直通多模式。
